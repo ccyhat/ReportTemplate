@@ -35,7 +35,7 @@ public class RibbonControlViewModel : Screen
 
     public void SaveFileClicked(object source, object eventArgs)
     {
-        MessageBox.Show("保存文件", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+        _editControlViewModel.SaveDocument();
     }
 
     public void SaveFileAsClicked(object source, object eventArgs)

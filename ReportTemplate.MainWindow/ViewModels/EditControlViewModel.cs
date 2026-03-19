@@ -51,10 +51,51 @@ public class EditControlViewModel : Screen
     /// </summary>
     public void TemplateList_DoubleClick(string? item)
     {
-      
-            MessageBox.Show($"双击了：{item}", "提示",
+        if (_wordDoc == null)
+        {
+            MessageBox.Show("请先打开 Word 文档", "提示",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        InsertBookmarkAtSelection("hello");
+    }
+
+    /// <summary>
+    /// 在 Word 当前光标位置插入书签
+    /// </summary>
+    /// <param name="bookmarkName">书签名称</param>
+    private void InsertBookmarkAtSelection(string bookmarkName)
+    {
+        try
+        {
+            if (_wordDoc == null)
+            {
+                MessageBox.Show("文档未打开", "错误",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // 获取当前选区
+            var selection = _wordApp.Selection;
+
+            // 如果存在同名书签，先删除
+            if (_wordDoc.Bookmarks.Exists(bookmarkName))
+            {
+                _wordDoc.Bookmarks[bookmarkName].Delete();
+            }
+
+            // 在当前选区位置添加书签
+            _wordDoc.Bookmarks.Add(bookmarkName, selection);
+
+            MessageBox.Show($"书签 '{bookmarkName}' 已插入到光标位置", "提示",
                 MessageBoxButton.OK, MessageBoxImage.Information);
-        
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"插入书签失败：{ex.Message}", "错误",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     /// <summary>
@@ -109,6 +150,31 @@ public class EditControlViewModel : Screen
     public void CloseDocument()
     {
         CloseWord();
+    }
+
+    /// <summary>
+    /// 保存 Word 文档
+    /// </summary>
+    public void SaveDocument()
+    {
+        try
+        {
+            if (_wordDoc == null)
+            {
+                MessageBox.Show("没有打开的文档可保存", "提示",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _wordDoc.Save();
+            MessageBox.Show("文档已保存", "提示",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"保存文档失败：{ex.Message}", "错误",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     /// <summary>
