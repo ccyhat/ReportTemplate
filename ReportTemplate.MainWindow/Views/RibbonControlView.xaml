@@ -1,0 +1,75 @@
+<UserControl x:Class="ReportTemplate.MainWindow.Views.RibbonControlView"
+             xmlns:cm="http://www.caliburnproject.org"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:ReportTemplate.MainWindow.Views"
+             mc:Ignorable="d"
+             d:DesignHeight="450" 
+             d:DesignWidth="800">
+    <Border Background="#FFF8F8F8" BorderBrush="#FFDDDDDD" BorderThickness="0,0,0,1" Padding="6">
+        <DockPanel>
+            <TabControl x:Name="RibbonTabs" TabStripPlacement="Top" Background="Transparent">
+                <!-- 开始 选项卡 -->
+                <TabItem Header="测试模板编辑">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Orientation="Horizontal" Margin="6" VerticalAlignment="Center">
+                            <!-- 分组：文件 -->
+                            <Border BorderBrush="#FFCCCCCC" BorderThickness="1" CornerRadius="2" Padding="6" Margin="4" Background="White">
+                                <StackPanel>
+                                    <TextBlock Text="文件" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="打开" Tag="打开" Width="80" Margin="2" cm:Message.Attach="[Event Click] = [Action OpenFileClicked($source, $eventArgs)]" />
+                                        <Button Content="关闭" Tag="关闭" Width="80" Margin="2" cm:Message.Attach="[Event Click] = [Action CloseFileClicked($source, $eventArgs)]" />
+                                        <Button Content="新建" Tag="新建" Width="80" Margin="2" />
+                                        <Button Content="保存" Tag="保存" Width="80" Margin="2" cm:Message.Attach="[Event Click] = [Action SaveFileClicked($source, $eventArgs)]" />
+                                        <Button Content="另存为" Tag="另存为" Width="80" Margin="2" cm:Message.Attach="[Event Click] = [Action SaveFileAsClicked($source, $eventArgs)]" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 分组：编辑（示例） -->
+                            <Border BorderBrush="#FFCCCCCC" BorderThickness="1" CornerRadius="2" Padding="6" Margin="4" Background="White">
+                                <StackPanel>
+                                    <TextBlock Text="备用" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="备用" Tag="备用" Width="70" Margin="2" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- 保存 选项卡 -->
+                <TabItem Header="备用">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Orientation="Horizontal" Margin="6" VerticalAlignment="Center">
+                            <Border BorderBrush="#FFCCCCCC" BorderThickness="1" CornerRadius="2" Padding="6" Margin="4" Background="White">
+                                <StackPanel>
+                                    <TextBlock Text="备用" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="备用" Tag="备用" Width="90" Margin="2" />
+                                        <Button Content="备用" Tag="备用" Width="90" Margin="2" />
+                                        <Button Content="备用" Tag="备用" Width="90" Margin="2"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border BorderBrush="#FFCCCCCC" BorderThickness="1" CornerRadius="2" Padding="6" Margin="4" Background="White">
+                                <StackPanel>
+                                    <TextBlock Text="备用" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="备用" Tag="备用" Width="70" Margin="2" />
+                                        <Button Content="备用" Tag="备用" Width="70" Margin="2" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+    </Border>
+</UserControl>
