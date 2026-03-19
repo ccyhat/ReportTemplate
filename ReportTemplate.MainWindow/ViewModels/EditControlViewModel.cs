@@ -2,32 +2,26 @@ using System;
 using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Forms.Integration;
 using Caliburn.Micro;
-using Panel = System.Windows.Forms.Panel;
 using MessageBox = System.Windows.MessageBox;
 using MessageBoxImage = System.Windows.MessageBoxImage;
 using MessageBoxButton = System.Windows.MessageBoxButton;
+using ReportTemplate.MainWindow.Events;
 
 namespace ReportTemplate.MainWindow.ViewModels;
 
 public class EditControlViewModel : Screen
 {
+    private readonly IEventAggregator _eventAggregator;
     private dynamic? _wordApp;
     private dynamic? _wordDoc;
-    private WindowsFormsHost? _host;
-    private Panel? _panel;
     private string _filePath = string.Empty;
     private string? _selectedItem;
 
     public string FilePath
     {
         get => _filePath;
-        set
-        {
-            _filePath = value;
-            NotifyOfPropertyChange(() => FilePath);
-        }
+        set => Set(ref _filePath, value);
     }
 
     /// <summary>
@@ -42,35 +36,25 @@ public class EditControlViewModel : Screen
         "模板 5 - 附录"
     };
 
-    /// <summary>
-    /// 选中的列表项
-    /// </summary>
-    public string? SelectedItem
-    {
-        get => _selectedItem;
-        set
-        {
-            _selectedItem = value;
-            NotifyOfPropertyChange(() => SelectedItem);
-            OnSelectedItemChanged();
-        }
-    }
+  
 
-    public EditControlViewModel()
+    public EditControlViewModel(IEventAggregator eventAggregator)
     {
+        _eventAggregator = eventAggregator;
         DisplayName = "Word 编辑器";
     }
 
+   
+
     /// <summary>
-    /// 处理列表项选中事件
+    /// 处理模板列表双击事件
     /// </summary>
-    private void OnSelectedItemChanged()
+    public void TemplateList_DoubleClick(string? item)
     {
-        if (!string.IsNullOrEmpty(SelectedItem))
-        {
-            // 暂时仅显示提示
-            // MessageBox.Show($"已选择：{SelectedItem}", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+      
+            MessageBox.Show($"双击了：{item}", "提示",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        
     }
 
     /// <summary>
@@ -95,7 +79,7 @@ public class EditControlViewModel : Screen
             }
 
             _wordApp = Activator.CreateInstance(wordType);
-            
+
 
             // 打开文档
             object fileName = filePath;
@@ -103,12 +87,12 @@ public class EditControlViewModel : Screen
             object isVisible = true;
             object missing = System.Reflection.Missing.Value;
 
-            _wordDoc = _wordApp.Documents.Open(fileName, missing, readOnly,
+            _wordDoc = _wordApp?.Documents.Open(fileName, missing, readOnly,
                 missing, missing, missing, missing, missing, missing,
                 missing, missing, isVisible, missing, missing, missing, missing);
 
-            // 获取 Word 窗口句柄并嵌入
-            EmbedWordIntoWindow();
+            // 请求 Panel 句柄并嵌入 Word 窗口
+            RequestPanelAndEmbed();
         }
         catch (Exception ex)
         {
@@ -127,51 +111,47 @@ public class EditControlViewModel : Screen
         CloseWord();
     }
 
-    private void EmbedWordIntoWindow()
+    /// <summary>
+    /// 请求 Panel 句柄并嵌入 Word 窗口
+    /// </summary>
+    private async void RequestPanelAndEmbed()
     {
         if (_wordApp == null || _wordDoc == null)
             return;
 
+        // 发布事件请求 Panel 句柄（在 UI 线程上）
+        var eventMessage = new RequestWordPanelHandleEvent();
+        await _eventAggregator.PublishOnUIThreadAsync(eventMessage);
+
+        if (eventMessage.PanelHandle != IntPtr.Zero)
+        {
+            EmbedWordIntoWindow(eventMessage.PanelHandle);
+        }
+        else
+        {
+            MessageBox.Show("无法获取 Panel 句柄", "错误",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+
+
+    /// <summary>
+    /// 嵌入 Word 窗口到 Panel
+    /// </summary>
+    private void EmbedWordIntoWindow(IntPtr panelHandle)
+    {
         try
         {
             // 获取 Word 应用程序的主窗口句柄
+#pragma warning disable CS8602
             IntPtr wordWnd = (IntPtr)_wordApp.ActiveWindow.Hwnd;
-
-            // 创建 WindowsFormsHost 来承载 Word
-            _host = new WindowsFormsHost();
-            _panel = new Panel
-            {
-                Dock = System.Windows.Forms.DockStyle.Fill
-            };
+#pragma warning restore CS8602
 
             // 将 Word 窗口设置为 Panel 的子窗口
-            NativeMethods.SetParent(wordWnd, _panel.Handle);
+            SetWordParent(wordWnd, panelHandle);
 
-            // 移除 Word 窗口的标题栏和边框样式
-            int style = NativeMethods.GetWindowLong(wordWnd, -16);
-            style &= ~0x00C00000; // 移除 WS_CAPTION
-            style &= ~0x00080000; // 移除 WS_BORDER
-            NativeMethods.SetWindowLong(wordWnd, -16, style);
-
-            // 设置 Word 窗口大小以填满 Panel
-            NativeMethods.MoveWindow(wordWnd, 0, 0, _panel.Width, _panel.Height, true);
-
-            // 监听 Panel 大小变化，同步调整 Word 窗口
-            _panel.Resize += (s, e) =>
-            {
-                if (_wordApp?.ActiveWindow != null)
-                {
-                    IntPtr wnd = (IntPtr)_wordApp.ActiveWindow.Hwnd;
-                    NativeMethods.MoveWindow(wnd, 0, 0, _panel.Width, _panel.Height, true);
-                }
-            };
-
-            NativeMethods.ShowWindow(wordWnd, 5); // SW_SHOW
-
-            _host.Child = _panel;
             _wordApp.Visible = true;
-            // 通知 View 更新内容
-            NotifyOfPropertyChange(() => WordHost);
         }
         catch (Exception ex)
         {
@@ -180,6 +160,37 @@ public class EditControlViewModel : Screen
         }
     }
 
+    /// <summary>
+    /// 设置 Word 窗口的父窗口并调整样式
+    /// </summary>
+    private void SetWordParent(IntPtr wordWnd, IntPtr parentHandle)
+    {
+        // 将 Word 窗口设置为 Panel 的子窗口
+        NativeMethods.SetParent(wordWnd, parentHandle);
+
+        // 移除 Word 窗口的标题栏和边框样式
+        int style = NativeMethods.GetWindowLong(wordWnd, -16);
+        style &= ~0x00C00000; // 移除 WS_CAPTION
+        style &= ~0x00080000; // 移除 WS_BORDER
+        NativeMethods.SetWindowLong(wordWnd, -16, style);
+
+        // 设置 Word 窗口大小以填满 Panel
+        NativeMethods.GetClientRect(parentHandle, out var rect);
+        NativeMethods.MoveWindow(wordWnd, 0, 0, rect.Right, rect.Bottom, true);
+
+        NativeMethods.ShowWindow(wordWnd, 5); // SW_SHOW
+
+        // 请求 View 订阅 Panel 的 Resize 事件
+        var resizeMessage = new SubscribePanelResizeEvent { WordWnd = wordWnd, PanelHandle = parentHandle };
+        _eventAggregator.PublishOnUIThreadAsync(resizeMessage);
+    }
+
+   
+    
+
+    /// <summary>
+    /// 关闭 Word 文档
+    /// </summary>
     private void CloseWord()
     {
         try
@@ -198,20 +209,11 @@ public class EditControlViewModel : Screen
                 _wordApp = null;
             }
 
-            if (_host != null)
-            {
-                _host.Child = null;
-                _host = null;
-            }
-
-            if (_panel != null)
-            {
-                _panel.Dispose();
-                _panel = null;
-            }
+            // 取消订阅 Panel 的 Resize 事件
+            var unsubscribeMessage = new UnsubscribePanelResizeEvent();
+            _eventAggregator.PublishOnUIThreadAsync(unsubscribeMessage);
 
             FilePath = string.Empty;
-            NotifyOfPropertyChange(() => WordHost);
         }
         catch (Exception ex)
         {
@@ -221,17 +223,24 @@ public class EditControlViewModel : Screen
     }
 
     /// <summary>
-    /// 获取 Word 嵌入容器
+    /// 清理 Word 资源
     /// </summary>
-    public object? WordHost => _host;
-
-    protected override void OnViewLoaded(object view)
+    public void Cleanup()
     {
-        base.OnViewLoaded(view);
+        CloseWord();
     }
 
-    internal static class NativeMethods
+    public static class NativeMethods
     {
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
         [DllImport("user32.dll")]
         public static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
 
@@ -246,5 +255,8 @@ public class EditControlViewModel : Screen
 
         [DllImport("user32.dll")]
         public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
     }
 }

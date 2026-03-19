@@ -5,6 +5,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:ReportTemplate.MainWindow.Views"
              xmlns:wfi="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
+             xmlns:winforms="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms"
+             xmlns:cm="http://www.caliburnproject.org"
              mc:Ignorable="d"
              d:DesignHeight="400"
              d:DesignWidth="600"
@@ -50,10 +52,20 @@
                     CornerRadius="4"
                     Background="White">
                 <ListBox ItemsSource="{Binding TemplateList}"
-                         SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                         DisplayMemberPath="."
                          Margin="5"
-                         BorderThickness="0"/>
+                         BorderThickness="0">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="cm:Message.Attach"
+                                    Value="[Event MouseDoubleClick] = [Action TemplateList_DoubleClick($dataContext)]"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" Padding="5" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </Border>
 
             <!-- 可拖动的分割条 -->
@@ -69,7 +81,9 @@
                     BorderThickness="1"
                     CornerRadius="4"
                     Background="White">
-                <ContentControl Content="{Binding WordHost}" />
+                <wfi:WindowsFormsHost x:Name="WordHostControl">
+                    <winforms:Panel Dock="Fill" />
+                </wfi:WindowsFormsHost>
             </Border>
         </Grid>
     </Grid>

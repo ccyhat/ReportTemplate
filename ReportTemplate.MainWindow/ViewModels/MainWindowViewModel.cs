@@ -26,4 +26,12 @@ public class MainWindowViewModel : Screen
     {
         EditControlViewModel.OpenDocument(filePath);
     }
+
+    /// <summary>
+    /// 清理所有子 ViewModel 的资源
+    /// </summary>
+    public void Cleanup()
+    {
+        EditControlViewModel.Cleanup();
+    }
 }
